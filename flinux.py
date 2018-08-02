@@ -131,7 +131,7 @@ class ExploitLoader:
 
 
 
-print("\nWelcome to FLinux v1.0, Lets get Hackin...\n")
+print("\nWelcome to FLinux v1.0, Lets get Hackin...SSHhhhhh!...\n")
 
 g = ExploitLoader()
 g.executeExploit()

